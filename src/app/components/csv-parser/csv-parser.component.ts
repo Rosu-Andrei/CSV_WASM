@@ -1,8 +1,10 @@
-// src/app/components/csv-parser/csv-parser.component.ts
-import { Component, ViewChild, AfterViewInit } from '@angular/core';
-import { WasmService } from '../../services/wasm.service';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatTableDataSource } from '@angular/material/table';
+import {Component, ViewChild, AfterViewInit} from '@angular/core';
+import {WasmService} from '../../services/wasm.service';
+import {JsCsvParserService} from '../../services/js-csv-parser.service';
+import {MatPaginator} from '@angular/material/paginator';
+import {MatTableDataSource} from '@angular/material/table';
+
+type ParsingMethod = 'Wasm' | 'JavaScript';
 
 @Component({
   selector: 'app-csv-parser',
@@ -11,21 +13,37 @@ import { MatTableDataSource } from '@angular/material/table';
 })
 export class CsvParserComponent implements AfterViewInit {
   csvData: string = '';
-  parsedData: any[] = [];
-  errorMessage: string = '';
-  loading: boolean = false;
+  parsedDataWasm: any[] = [];
+  parsedDataJs: any[] = [];
+  errorMessageWasm: string = '';
+  errorMessageJs: string = '';
+  loadingWasm: boolean = false;
+  loadingJs: boolean = false;
 
-  displayedColumns: string[] = [];
-  dataSource = new MatTableDataSource<any>(this.parsedData);
+  displayedColumnsWasm: string[] = [];
+  displayedColumnsJs: string[] = [];
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  dataSourceWasm = new MatTableDataSource<any>(this.parsedDataWasm);
+  dataSourceJs = new MatTableDataSource<any>(this.parsedDataJs);
 
-  constructor(private wasmService: WasmService) {}
+  @ViewChild('paginatorWasm') paginatorWasm!: MatPaginator;
+  @ViewChild('paginatorJs') paginatorJs!: MatPaginator;
 
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
+  constructor(
+    private wasmService: WasmService,
+    private jsCsvParserService: JsCsvParserService
+  ) {
   }
 
+  ngAfterViewInit() {
+    this.dataSourceWasm.paginator = this.paginatorWasm;
+    this.dataSourceJs.paginator = this.paginatorJs;
+  }
+
+  /**
+   * Handles file selection and reads the CSV file content.
+   * @param event The file input change event.
+   */
   onFileSelected(event: any) {
     const file: File = event.target.files[0];
     if (file) {
@@ -37,38 +55,81 @@ export class CsvParserComponent implements AfterViewInit {
     }
   }
 
-  parseCsv() {
+  /**
+   * Parses the CSV data using the selected method.
+   * @param method The parsing method to use ('Wasm' or 'JavaScript').
+   */
+  async parseCsv(method: ParsingMethod) {
     if (!this.csvData) {
-      this.errorMessage = 'Please upload a CSV file first.';
+      this.displayError(method, 'Please upload a CSV file first.');
       return;
     }
 
-    if (!this.wasmService.isLoaded) {
-      this.errorMessage = 'Wasm module is not loaded yet. Please try again shortly.';
+    if (method === 'Wasm' && !this.wasmService.isLoaded) {
+      this.displayError(method, 'Wasm module is not loaded yet. Please try again shortly.');
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
-    this.parsedData = [];
-    this.displayedColumns = [];
+    if (method === 'JavaScript') {
+      this.loadingJs = true;
+      this.errorMessageJs = '';
+      this.parsedDataJs = [];
+      this.displayedColumnsJs = [];
+    } else {
+      this.loadingWasm = true;
+      this.errorMessageWasm = '';
+      this.parsedDataWasm = [];
+      this.displayedColumnsWasm = [];
+    }
+
+    const startTime = performance.now();
 
     try {
-      const result = this.wasmService.parseCsv(this.csvData);
-      if (typeof result === 'string') {
-        // Handle error message from Rust
-        this.errorMessage = result as string;
+      let result: any[];
+      if (method === 'Wasm') {
+        result = this.wasmService.parseCsv(this.csvData);
       } else {
-        this.parsedData = result;
-        this.dataSource.data = this.parsedData;
-        if (this.parsedData.length > 0) {
-          this.displayedColumns = Object.keys(this.parsedData[0]);
+        result = await this.jsCsvParserService.parseCsv(this.csvData);
+      }
+      const endTime = performance.now();
+      const timeTaken = (endTime - startTime).toFixed(2);
+
+      if (method === 'Wasm') {
+        this.parsedDataWasm = result;
+        this.dataSourceWasm.data = this.parsedDataWasm;
+        if (this.parsedDataWasm.length > 0) {
+          this.displayedColumnsWasm = Object.keys(this.parsedDataWasm[0]);
         }
+        this.errorMessageWasm = `Parsed successfully in ${timeTaken} ms using Wasm.`;
+      } else {
+        this.parsedDataJs = result;
+        this.dataSourceJs.data = this.parsedDataJs;
+        if (this.parsedDataJs.length > 0) {
+          this.displayedColumnsJs = Object.keys(this.parsedDataJs[0]);
+        }
+        this.errorMessageJs = `Parsed successfully in ${timeTaken} ms using JavaScript.`;
       }
     } catch (error: any) {
-      this.errorMessage = 'Error parsing CSV: ' + error.message;
+      this.displayError(method, `Error parsing CSV: ${error.message}`);
     } finally {
-      this.loading = false;
+      if (method === 'Wasm') {
+        this.loadingWasm = false;
+      } else {
+        this.loadingJs = false;
+      }
+    }
+  }
+
+  /**
+   * Displays an error message for the specified parsing method.
+   * @param method The parsing method ('Wasm' or 'JavaScript').
+   * @param message The error message to display.
+   */
+  private displayError(method: ParsingMethod, message: string) {
+    if (method === 'Wasm') {
+      this.errorMessageWasm = message;
+    } else {
+      this.errorMessageJs = message;
     }
   }
 }

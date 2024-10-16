@@ -3,20 +3,52 @@
   padding: 20px;
 }
 
+.file-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.loading {
+  margin: 10px 0;
+  color: blue;
+}
+
+.messages {
+  margin: 10px 0;
+}
+
 .error {
   color: red;
 }
 
+.success {
+  color: green;
+}
+
+.parsed-data {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.table-section {
+  width: 100%;
+}
+
 table {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
-mat-header-cell, mat-cell {
-  padding: 8px;
-  text-align: left;
+mat-paginator {
+  margin-top: 10px;
 }
 
-mat-header-row, mat-row {
-  display: table-row;
+.viewport {
+  height: 400px; /* Adjust based on your preference */
+  width: 100%;
+  border: 1px solid #ccc;
+  overflow: auto;
 }
