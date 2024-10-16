@@ -1,0 +1,35 @@
+<!-- src/app/components/csv-parser/csv-parser.component.html -->
+<div class="container">
+  <h2>Large Dataset Handling with Rust + Wasm</h2>
+
+  <div>
+    <input type="file" accept=".csv" (change)="onFileSelected($event)" />
+    <button mat-raised-button color="primary" (click)="parseCsv()" [disabled]="loading || !csvData">
+      Parse CSV
+    </button>
+  </div>
+
+  <div *ngIf="loading">
+    <p>Processing...</p>
+  </div>
+
+  <div *ngIf="errorMessage">
+    <p class="error">{{ errorMessage }}</p>
+  </div>
+
+  <div *ngIf="parsedData.length > 0">
+    <h3>Parsed Data:</h3>
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+      <!-- Dynamic Columns -->
+      <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+        <th mat-header-cell *matHeaderCellDef> {{ column }} </th>
+        <td mat-cell *matCellDef="let element"> {{ element[column] }} </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+
+    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
+  </div>
+</div>
