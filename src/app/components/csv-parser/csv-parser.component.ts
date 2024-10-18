@@ -1,6 +1,6 @@
 import {Component, ViewChild, AfterViewInit} from '@angular/core';
-import {WasmService} from '../../services/wasm.service';
-import {JsCsvParserService} from '../../services/js-csv-parser.service';
+import {WasmService} from 'app/services/wasm.service';
+import {JsCsvParserService} from 'app/services/js-csv-parser.service';
 import {MatPaginator} from '@angular/material/paginator';
 import {MatTableDataSource} from '@angular/material/table';
 
